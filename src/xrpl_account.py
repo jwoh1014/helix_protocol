@@ -13,6 +13,8 @@ from xrpl.utils import datetime_to_ripple_time
 from xrpl.transaction import autofill_and_sign, send_reliable_submission
 from xrpl.account import get_balance
 
+from utils import address
+
 JSON_RPC_URL = "https://s.altnet.rippletest.net:51234"
 
 
@@ -39,12 +41,12 @@ class XrplAccount:
         if wallet_path != "":
             self.load_wallet(wallet_path)
 
-    def generate_wallet(self, wallet_path: str = "wallet.json") -> Wallet:
+    def generate_wallet(self, wallet_path: str) -> Wallet:
         """
         Generates a new wallet and saves the wallet information to a file.
 
         Args:
-            wallet_path (str, optional): The path to the file to store the wallet information. Defaults to "wallet.json".
+            wallet_path (str, optional): The path to the file to store the wallet information.
         """
         self._wallet = generate_faucet_wallet(self._client, debug=True)
 
@@ -78,12 +80,12 @@ class XrplAccount:
         """
         return self._wallet
 
-    def get_address(self) -> str:
+    def get_classic_address(self) -> address:
         """
         Returns:
-            str: classic address of the wallet
+            address: classic address of the wallet
         """
-        return self._wallet.classic_address
+        return address(self._wallet.classic_address)
 
     def fetch_balance(self) -> int:
         """
@@ -103,7 +105,7 @@ class XrplAccount:
         Returns:
             list[dict]: _description_
         """
-        account_objects_request = AccountObjects(account=self.get_address())
+        account_objects_request = AccountObjects(account=self.get_classic_address())
         account_objects = (self._client.request(account_objects_request)).result["account_objects"]
         return account_objects
 
@@ -113,7 +115,7 @@ class XrplAccount:
         Returns:
             dict: _description_
         """
-        account_info_request = AccountInfo(account=self.get_address())
+        account_info_request = AccountInfo(account=self.get_classic_address())
         account_info = (self._client.request(account_info_request)).result
         return account_info
 
@@ -123,16 +125,16 @@ class XrplAccount:
         Returns:
             list[dict]: _description_
         """
-        escrow_objects_request = AccountObjects(account=self.get_address())
+        escrow_objects_request = AccountObjects(account=self.get_classic_address())
         escrow_objects = (self._client.request(escrow_objects_request)).result["account_objects"]
         return escrow_objects
 
-    def send_xrp(self, destination_address: str, amount: str | int) -> Response:
+    def send_xrp(self, destination_address: address, amount: str | int) -> Response:
         """
         Sends XRP to a specific address.
 
         Args:
-            destination_address (str): The address to send XRP to.
+            destination_address (address): The address to send XRP to.
             amount (str): The amount of XRP to send.
 
         Returns:
@@ -140,7 +142,7 @@ class XrplAccount:
 
         """
         payment_tx = Payment(
-            account=self._wallet.classic_address,
+            account=self.get_classic_address(),
             amount=str(amount),
             destination=destination_address,
         )
@@ -153,7 +155,7 @@ class XrplAccount:
 
     def create_escrow(
         self,
-        destination_address: str,
+        destination_address: address,
         amount: str | int,
         finish_after: datetime,
         cancel_after: datetime = None,  # type: ignore
@@ -162,7 +164,7 @@ class XrplAccount:
         Creates an escrow payment to a specific address.
 
         Args:
-            destination_address (str): The address to send the escrow payment to.
+            destination_address (address): The address to send the escrow payment to.
             amount (str | int): The amount of XRP to send.
             finish_after (datetime): The time after which the escrow can be finished.
             cancel_after (datetime, optional): The time after which the escrow can be cancelled. Defaults to None.
@@ -175,7 +177,7 @@ class XrplAccount:
             cancel_after = datetime_to_ripple_time(cancel_after)  # type: ignore
 
         create_tx = EscrowCreate(
-            account=self._wallet.classic_address,
+            account=self.get_classic_address(),
             destination=destination_address,
             amount=str(amount),
             finish_after=finish_after,  # type: ignore
@@ -204,8 +206,8 @@ class XrplAccount:
             Response: The response from the XRP Ledger.
         """
         finish_tx = EscrowFinish(
-            account=self._wallet.classic_address,
-            owner=self._wallet.classic_address,
+            account=self.get_classic_address(),
+            owner=self.get_classic_address(),
             offer_sequence=offer_sequence,
         )
 
@@ -225,8 +227,8 @@ class XrplAccount:
             Response: The response from the XRP Ledger.
         """
         cancel_tx = EscrowCancel(
-            account=self._wallet.classic_address,
-            owner=self._wallet.classic_address,
+            account=self.get_classic_address(),
+            owner=self.get_classic_address(),
             offer_sequence=offer_sequence,
         )
 
@@ -259,8 +261,8 @@ class XrplAccount:
 
 if __name__ == "__main__":
     xrpl_client = JsonRpcClient(JSON_RPC_URL)
-    test_account = XrplAccount(client=xrpl_client, wallet_path="wallet.json")
-    dest_account = XrplAccount(client=xrpl_client, wallet_path="destination.json")
+    test_account = XrplAccount(client=xrpl_client, wallet_path="database/wallet.json")
+    dest_account = XrplAccount(client=xrpl_client, wallet_path="database/destination.json")
     # dest_address = dest_account.get_wallet().classic_address
     # print(test_account)
     # print(dest_account)
