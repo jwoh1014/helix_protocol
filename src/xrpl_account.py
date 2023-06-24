@@ -34,8 +34,8 @@ class XrplAccount:
         Args:
             wallet_path (str): The path to the file that stores the wallet information.
         """
-        self.client = client
-        self.wallet: Wallet = None  # type: ignore
+        self._client = client
+        self._wallet: Wallet = None  # type: ignore
         if wallet_path != "":
             self.load_wallet(wallet_path)
 
@@ -46,12 +46,12 @@ class XrplAccount:
         Args:
             wallet_path (str, optional): The path to the file to store the wallet information. Defaults to "wallet.json".
         """
-        self.wallet = generate_faucet_wallet(self.client, debug=True)
+        self._wallet = generate_faucet_wallet(self._client, debug=True)
 
         with open(wallet_path, "w", encoding="UTF-8") as file:
-            json.dump(self.wallet.__dict__, file)
+            json.dump(self._wallet.__dict__, file)
 
-        return self.wallet
+        return self._wallet
 
     def load_wallet(self, wallet_path: str) -> Wallet:
         """
@@ -63,27 +63,27 @@ class XrplAccount:
         with open(wallet_path, "r", encoding="UTF-8") as file:
             wallet_info = json.load(file)
 
-        self.wallet = Wallet(
+        self._wallet = Wallet(
             seed=wallet_info["seed"],
             sequence=wallet_info["sequence"],
             algorithm=wallet_info["algorithm"],
         )
 
-        return self.wallet
+        return self._wallet
 
     def get_wallet(self) -> Wallet:
         """
         Returns:
             Wallet: The current wallet.
         """
-        return self.wallet
+        return self._wallet
 
     def get_address(self) -> str:
         """
         Returns:
             str: classic address of the wallet
         """
-        return self.wallet.classic_address
+        return self._wallet.classic_address
 
     def fetch_balance(self) -> int:
         """
@@ -92,10 +92,10 @@ class XrplAccount:
         Returns:
             int: The balance of the current wallet in XRP.
         """
-        if self.wallet is None:
+        if self._wallet is None:
             raise Exception("Wallet is not loaded or generated.")
 
-        return get_balance(self.wallet.classic_address, self.client)
+        return get_balance(self._wallet.classic_address, self._client)
 
     def get_account_objects(self) -> list[dict]:
         """_summary_
@@ -103,10 +103,8 @@ class XrplAccount:
         Returns:
             list[dict]: _description_
         """
-        account_objects_request = AccountObjects(account=self.wallet.classic_address)
-        account_objects = (test_account.client.request(account_objects_request)).result[
-            "account_objects"
-        ]
+        account_objects_request = AccountObjects(account=self.get_address())
+        account_objects = (self._client.request(account_objects_request)).result["account_objects"]
         return account_objects
 
     def get_account_info(self) -> dict:
@@ -115,8 +113,8 @@ class XrplAccount:
         Returns:
             dict: _description_
         """
-        account_info_request = AccountInfo(account=self.wallet.classic_address)
-        account_info = (test_account.client.request(account_info_request)).result
+        account_info_request = AccountInfo(account=self.get_address())
+        account_info = (self._client.request(account_info_request)).result
         return account_info
 
     def get_escrow_objects(self) -> list[dict]:
@@ -125,10 +123,8 @@ class XrplAccount:
         Returns:
             list[dict]: _description_
         """
-        escrow_objects_request = AccountObjects(account=test_account.wallet.classic_address)
-        escrow_objects = (test_account.client.request(escrow_objects_request)).result[
-            "account_objects"
-        ]
+        escrow_objects_request = AccountObjects(account=self.get_address())
+        escrow_objects = (self._client.request(escrow_objects_request)).result["account_objects"]
         return escrow_objects
 
     def send_xrp(self, destination_address: str, amount: str | int) -> Response:
@@ -144,14 +140,14 @@ class XrplAccount:
 
         """
         payment_tx = Payment(
-            account=self.wallet.classic_address,
+            account=self._wallet.classic_address,
             amount=str(amount),
             destination=destination_address,
         )
 
-        signed_payment_tx = autofill_and_sign(payment_tx, self.wallet, self.client)
+        signed_payment_tx = autofill_and_sign(payment_tx, self._wallet, self._client)
 
-        response = send_reliable_submission(signed_payment_tx, self.client)
+        response = send_reliable_submission(signed_payment_tx, self._client)
 
         return response
 
@@ -179,15 +175,15 @@ class XrplAccount:
             cancel_after = datetime_to_ripple_time(cancel_after)  # type: ignore
 
         create_tx = EscrowCreate(
-            account=self.wallet.classic_address,
+            account=self._wallet.classic_address,
             destination=destination_address,
             amount=str(amount),
             finish_after=finish_after,  # type: ignore
             cancel_after=cancel_after,  # type: ignore
         )
 
-        signed_create_tx = autofill_and_sign(create_tx, self.wallet, self.client)
-        create_escrow_response = send_reliable_submission(signed_create_tx, self.client)
+        signed_create_tx = autofill_and_sign(create_tx, self._wallet, self._client)
+        create_escrow_response = send_reliable_submission(signed_create_tx, self._client)
 
         # account_objects_request = AccountObjects(account=self.wallet.classic_address)
         # account_objects = (self.client.request(account_objects_request)).result["account_objects"]
@@ -208,13 +204,13 @@ class XrplAccount:
             Response: The response from the XRP Ledger.
         """
         finish_tx = EscrowFinish(
-            account=self.wallet.classic_address,
-            owner=self.wallet.classic_address,
+            account=self._wallet.classic_address,
+            owner=self._wallet.classic_address,
             offer_sequence=offer_sequence,
         )
 
-        signed_finish_tx = autofill_and_sign(finish_tx, self.wallet, self.client)
-        finish_escrow_response = send_reliable_submission(signed_finish_tx, self.client)
+        signed_finish_tx = autofill_and_sign(finish_tx, self._wallet, self._client)
+        finish_escrow_response = send_reliable_submission(signed_finish_tx, self._client)
 
         return finish_escrow_response
 
@@ -229,13 +225,13 @@ class XrplAccount:
             Response: The response from the XRP Ledger.
         """
         cancel_tx = EscrowCancel(
-            account=self.wallet.classic_address,
-            owner=self.wallet.classic_address,
+            account=self._wallet.classic_address,
+            owner=self._wallet.classic_address,
             offer_sequence=offer_sequence,
         )
 
-        signed_cancel_tx = autofill_and_sign(cancel_tx, self.wallet, self.client)
-        cancel_escrow_response = send_reliable_submission(signed_cancel_tx, self.client)
+        signed_cancel_tx = autofill_and_sign(cancel_tx, self._wallet, self._client)
+        cancel_escrow_response = send_reliable_submission(signed_cancel_tx, self._client)
 
         return cancel_escrow_response
 
@@ -246,7 +242,7 @@ class XrplAccount:
         Returns:
             str: A string representing the XRPL object.
         """
-        return f"XRPL\nclient_url={self.client.url}\nwallet=\n{self.wallet}"
+        return f"XRPL\nclient_url={self._client.url}\nwallet=\n{self._wallet}"
 
     def __dict__(self) -> dict:
         """
@@ -256,8 +252,8 @@ class XrplAccount:
             dict: A dictionary representing the XRPL object.
         """
         return {
-            "client": self.client,
-            "wallet": self.wallet,
+            "client": self._client,
+            "wallet": self._wallet,
         }
 
 
