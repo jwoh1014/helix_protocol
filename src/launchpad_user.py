@@ -45,6 +45,6 @@ class LaunchpadUser(XrplAccount):
         """
         if ico_project.is_goal_reached():
             self.portfolio[ico_project.project_name].backers[
-                self.get_address()
+                self.get_classic_address()
             ].status = FundStatus.CLAIMED
             return

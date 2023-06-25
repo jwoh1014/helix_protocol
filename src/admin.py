@@ -6,8 +6,6 @@ from xrpl.wallet import Wallet
 
 from xrpl_account import XrplAccount
 from ico_project import IcoProject
-from launchpad_user import LaunchpadUser
-from utils import address
 
 
 class Admin(XrplAccount):

@@ -50,7 +50,7 @@ class IcoProject:
     def global_freeze_token(self):
         return
 
-    def refund_tocken(self, backer_address: address, amount: int):
+    def refund_token(self, backer_address: address, amount: int):
         """
 
         Args:
@@ -101,9 +101,9 @@ class IcoProject:
         status += f"Remaining Days: {self.get_remaining_days()}\n"
         return status
 
-    def get_classic_address(self) -> str:
+    def get_classic_address(self) -> address:
         """
         Returns:
-            str: classic address of the wallet
+            address: classic address of the wallet
         """
-        return self._wallet.classic_address
+        return address(self._wallet.classic_address)
