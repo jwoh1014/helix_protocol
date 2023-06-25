@@ -15,10 +15,15 @@ class Admin(XrplAccount):
         super().__init__(client, wallet_path)
 
         self.ico_projects: Dict[str, IcoProject] = {}
-        self.users: Dict[address, LaunchpadUser] = {}
+        # self.users: Dict[address, LaunchpadUser] = {}
 
     def create_ico_project(
-        self, project_name: str, start_date: datetime, end_date: datetime, goal_amount: int
+        self,
+        project_name: str,
+        symbol_name: str,
+        start_date: datetime,
+        end_date: datetime,
+        goal_amount: int,
     ):
         """_summary_
 
@@ -29,7 +34,9 @@ class Admin(XrplAccount):
             goal_amount (int): _description_
         """
         wallet = Wallet.create()
-        ico_project = IcoProject(project_name, start_date, end_date, goal_amount, wallet)
+        ico_project = IcoProject(
+            project_name, symbol_name, start_date, end_date, goal_amount, wallet
+        )
         self.ico_projects[project_name] = ico_project
 
     def close_ico_project(self, project_name: str):
@@ -41,5 +48,3 @@ class Admin(XrplAccount):
         ico_project = self.ico_projects[project_name]
         if ico_project.end_date > datetime.now():
             return
-        if ico_project.is_goal_reached():
-            ico_project._wallet.send_xrp(ico_project.current_amount, self.get_classic_address())
